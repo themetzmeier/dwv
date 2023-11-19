@@ -242,6 +242,10 @@ export class App {
    */
   #listenerHandler = new ListenerHandler();
 
+  #updateParent = null;
+
+  #databaseObjects = null;
+
   /**
    * Get the image.
    *
@@ -1338,14 +1342,15 @@ export class App {
   /**
    * Set the tool
    *
-   * @param {string} tool The tool.
+   * @param {object} toolObject containing the name of the tool and the corresponding parent component update function.
    */
-  setTool(tool) {
+  setTool(toolObject) {
     // bind tool to active layer
     for (let i = 0; i < this.#stage.getNumberOfLayerGroups(); ++i) {
       const layerGroup = this.#stage.getLayerGroup(i);
       // draw or view layer
       let layer = null;
+      let tool = toolObject.tool;
       if (tool === 'Draw' ||
         tool === 'Livewire' ||
         tool === 'Floodfill') {
@@ -1358,8 +1363,12 @@ export class App {
       }
     }
 
+    if(toolObject.hasOwnProperty("updateParent") && toolObject.updateParent) {
+      this.setUpdateParent(toolObject.updateParent);
+    }
+
     // set toolbox tool
-    this.#toolboxController.setSelectedTool(tool);
+    this.#toolboxController.setSelectedTool(toolObject.tool);
   }
 
   /**
@@ -1369,6 +1378,35 @@ export class App {
    */
   setToolFeatures(list) {
     this.#toolboxController.setToolFeatures(list);
+  }
+
+  /**
+   * Get the current parent component update function.
+   *
+   */
+  getUpdateParent() {
+    return this.#updateParent;
+  }
+
+  /**
+   * Set the parent component update function.
+   *
+   * @param {function} updateParent The list of features.
+   */
+  setUpdateParent(updateParent) {
+    this.#updateParent = updateParent;
+  }
+
+  getDatabaseObjects() {
+    return this.#databaseObjects;
+  }
+
+  setDatabaseObjects(databaseObjects) {
+    this.#databaseObjects = databaseObjects;
+  }
+
+  populateDatabaseObjects() {
+
   }
 
   /**

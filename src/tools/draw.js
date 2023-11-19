@@ -220,6 +220,47 @@ export class Draw {
   #listeners = {};
 
   /**
+   *  Load stored drawings
+   * 
+   * @param {object} dbObject The object from the database.
+   */
+  loadDrawing = (dbObject) => {
+    const layerGroup = this.#app.getLayerGroupByDivId(dbObject.groupDivId);
+
+    // set shapename
+    this.#shapeName = dbObject.shapeName;
+
+    // disable edition
+    this.#shapeEditor.disable();
+    this.#shapeEditor.reset();
+
+    // start storing points
+    this.#started = true;
+
+    // set factory
+    this.#currentFactory = new this.#shapeFactoryList[this.#shapeName]();
+
+    // clear array
+    this.#points = [];
+
+    // store point
+    const viewLayer = layerGroup.getActiveViewLayer();
+    const pos1 = viewLayer.displayToPlanePos(dbObject.x1, dbObject.y1);
+    this.#lastPoint = new Point2D(pos1.x, pos1.y);
+    this.#points.push(this.#lastPoint);
+
+    const pos2 = viewLayer.displayToPlanePos(dbObject.x2, dbObject.y2);
+    this.#lastPoint = new Point2D(pos2.x, pos2.y);
+    this.#points.push(this.#lastPoint);
+
+    // store points
+    this.#onFinalPoints(this.#points, layerGroup, null);
+    // reset flag
+    this.#started = false;
+  };
+
+
+  /**
    * Handle mouse down event.
    *
    * @param {object} event The mouse down event.
@@ -334,7 +375,7 @@ export class Draw {
       const layerDetails = getLayerDetailsFromEvent(event);
       const layerGroup =
         this.#app.getLayerGroupByDivId(layerDetails.groupDivId);
-      this.#onFinalPoints(this.#points, layerGroup);
+      this.#onFinalPoints(this.#points, layerGroup, this.#app.getUpdateParent());
       // reset flag
       this.#started = false;
     } else {
@@ -368,7 +409,7 @@ export class Draw {
     // store points
     const layerDetails = getLayerDetailsFromEvent(event);
     const layerGroup = this.#app.getLayerGroupByDivId(layerDetails.groupDivId);
-    this.#onFinalPoints(this.#points, layerGroup);
+    this.#onFinalPoints(this.#points, layerGroup, this.#app.getUpdateParent());
     // reset flag
     this.#started = false;
   };
@@ -554,8 +595,9 @@ export class Draw {
    *
    * @param {Point2D[]} finalPoints The array of points.
    * @param {LayerGroup} layerGroup The origin layer group.
+   * @param {function} updateParent The parent component update function.
    */
-  #onFinalPoints(finalPoints, layerGroup) {
+  #onFinalPoints(finalPoints, layerGroup, updateParent) {
     // reset temporary shape group
     if (this.#tmpShapeGroup) {
       this.#tmpShapeGroup.destroy();
@@ -596,6 +638,18 @@ export class Draw {
 
     // activate shape listeners
     this.setShapeOn(finalShapeGroup, layerGroup);
+
+    if(updateParent) {
+      let finalPointsObject = { 
+        "x1": finalPoints[0].getX(), 
+        "y1": finalPoints[0].getY(), 
+        "x2": finalPoints[1].getX(), 
+        "y2": finalPoints[1].getY(),
+        "groupDivId": layerGroup.getDivId(),
+        "shapeName": this.#shapeName
+      };
+      updateParent(finalPointsObject);
+    }
   }
 
   /**
@@ -901,6 +955,11 @@ export class Draw {
         delcmd.onUndo = this.#fireEvent;
         delcmd.execute();
         this.#app.addToUndoStack(delcmd);
+        const updateParent = this.#app.getUpdateParent()
+        updateParent({
+          "groupDivId": layerGroup.getDivId(),
+          "shapeName": this.#shapeName
+        })
       } else {
         // save drag move
         const translation = {
