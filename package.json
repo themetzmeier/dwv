@@ -1,6 +1,6 @@
 {
   "name": "@themetzmeier/dwv",
-  "version": "0.41",
+  "version": "0.5.0",
   "description": "DICOM Web Viewer.",
   "keywords": [
     "DICOM",
